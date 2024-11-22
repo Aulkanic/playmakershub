@@ -1,69 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MemberCard from "../../../components/admin/MemberCard";
 import Modal from "../../../components/admin/Reusable/Modal";
 import MemberForm from "../../../components/admin/Reusable/MemberForm";
 import MemberDetailsModal from "../../../components/admin/MemberDetailsModal";
-import { playmakersLogo } from "../../../assets";
 import Sidebar from "../../../components/admin/Sidebar";
-import Header from "../../../components/admin/Header";
-
-const membersData = [
-  {
-    name: "Jie Clark Terec",
-    email: "jieclark@ustp.edu.ph",
-    role: ["Percussionist", "Keyboardist"],
-    genre: ["Rock", "Jazz"],
-    mobile: "0916513814",
-    events: 32,
-    joinDate: "June 06, 2024",
-    status: "active",
-    image: playmakersLogo,
-  },
-  {
-    name: "Prince Edward Zacarias",
-    email: "jieclark@ustp.edu.ph",
-    role: ["Percussionist", "Keyboardist"],
-    genre: ["Rock", "Jazz"],
-    mobile: "0916513814",
-    events: 32,
-    joinDate: "July 13, 2020",
-    status: "inactive",
-    image: playmakersLogo,
-  },
-  {
-    name: "James Heinrich Rocales",
-    email: "rocales.jamesheinrich@ustp.edu.ph",
-    role: ["Percussionist", "Keyboardist"],
-    genre: ["Rock", "Jazz"],
-    mobile: "0916513814",
-    events: 32,
-    joinDate: "July 13, 2020",
-    status: "warning",
-    image: playmakersLogo,
-  },
-];
+import Header from "../../../components/admin/Header"; // Adjust the path as needed
+import { createMember, deleteMember, fetchMembers, updateMember } from "../../../database/supabase";
 
 const MemberOrganization = () => {
-  const [members, setMembers] = useState(membersData);
+  const [members, setMembers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [newMember, setNewMember] = useState({
-    name: "",
     email: "",
     role: [],
     genre: [],
     mobile: "",
-    events: "",
-    joinDate: "",
+    events: 0,
+    join_date: "",
     status: "active",
+    profile_image:'',
+    name: "",
   });
   const [roles, setRoles] = useState([]);
   const [genres, setGenres] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [filter, setFilter] = useState("all");
 
+  const loadMembers = async () => {
+    const data = await fetchMembers();
+    console.log(data)
+    const list = data?.map((v) =>({
+      ...data,
+      genre: JSON.parse(v.genre),
+      role: JSON.parse(v.role),
+    }))
+    if (list) {
+      setMembers(list);
+    }
+  };
+  // Fetch members from Supabase on component mount
+  useEffect(() => {
+
+    loadMembers();
+  }, []);
+
   /**
-   *  Filtered members based sa status
+   * Filtered members based on status
    */
   const filteredMembers = members.filter((member) => {
     if (filter === "all") return true;
@@ -80,38 +63,58 @@ const MemberOrganization = () => {
     setSelectedMember(null);
   };
 
-  const handleSubmit = () => {
-    setMembers([
-      ...members,
-      {
-        ...newMember,
-        role: roles,
-        genre: genres,
-        joinDate: new Date().toISOString().split("T")[0],
-        events: 0,
-      },
-    ]);
+  // Add a new member
+  const handleSubmit = async () => {
+    const memberData = {
+      ...newMember,
+      role: roles,
+      genre: genres,
+      join_date: new Date().toISOString().split("T")[0],
+      events: 0,
+    };
+    console.log(memberData)
+    const data = await createMember(memberData);
+    if (data) {
+      loadMembers()
+    }
     setIsModalOpen(false);
     setNewMember({
-      name: "",
       email: "",
       role: [],
       genre: [],
       mobile: "",
       status: "active",
+      profile_image:'',
+      name: "",
     });
     setRoles([]);
     setGenres([]);
   };
 
-  /**
-   * Tig Handle kung e view details ang selected member member pag e click ang specific member
-   */
   const handleViewDetails = (member) => {
+    console.log(member)
     setSelectedMember(member);
     setIsDetailsModalOpen(true);
   };
 
+  const handleUpdateMember = async (id, updatedData) => {
+    const data = await updateMember(id, updatedData);
+    if (data) {
+      setMembers(
+        members.map((member) => (member.id === id ? { ...member, ...updatedData } : member))
+      );
+    }
+    setIsDetailsModalOpen(false);
+  };
+
+  const handleDeleteMember = async (id) => {
+    const data = await deleteMember(id);
+    if (data) {
+      setMembers(members.filter((member) => member.id !== id));
+    }
+    setIsDetailsModalOpen(false);
+  };
+  console.log(newMember)
   return (
     <div className="min-h-screen flex bg-[#FBEBF1]">
       <Sidebar />
@@ -142,19 +145,25 @@ const MemberOrganization = () => {
         </div>
 
         <div className="px-4 py-10 flex flex-wrap">
-          {filteredMembers.map((member, index) => (
+          {filteredMembers.map((member,idx) => {
+              const info = {
+                ...member[idx.toString()],
+                genre: JSON.parse(member[idx.toString()].genre),
+                role: JSON.parse(member[idx.toString()].role),
+              }
+            return(
             <div
-              key={index}
+              key={idx}
               className="cursor-pointer"
-              onClick={() => handleViewDetails(member)}
+              onClick={() => handleViewDetails(info)}
             >
-              <MemberCard {...member} />
+              <MemberCard {...info} />
             </div>
-          ))}
+          )})}
         </div>
       </div>
 
-      {/* Animal nga modal */}
+      {/* Modal for Adding Member */}
       <Modal isOpen={isModalOpen} title="Add Member" onClose={closeModal}>
         <MemberForm
           newMember={newMember}
@@ -166,12 +175,15 @@ const MemberOrganization = () => {
           handleSubmit={handleSubmit}
         />
       </Modal>
-      {/* Separate Modal para sa pag View sa Member Details */}
+
+      {/* Modal for Viewing Member Details */}
       {selectedMember && (
         <MemberDetailsModal
           member={selectedMember}
           isOpen={isDetailsModalOpen}
           onClose={closeModal}
+          onUpdate={(updatedData) => handleUpdateMember(selectedMember.id, updatedData)}
+          onDelete={() => handleDeleteMember(selectedMember.id)}
         />
       )}
     </div>

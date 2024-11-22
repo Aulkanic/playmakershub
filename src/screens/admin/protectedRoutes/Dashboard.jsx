@@ -68,12 +68,23 @@ const Dashboard = () => {
               >
                 Recent Updates
               </button>
+              <button
+                className={`p-2 text-[#4B4B4C] font-bold px-5 text-sm ${
+                  activeTab === "recentEvents"
+                    ? "border-b-2 border-[#5C1B33]"
+                    : ""
+                }`}
+                onClick={() => handleTabChange("recentEvents")}
+              >
+                Recent Events
+              </button>
             </div>
             {/* Content Based sa  Active Tab */}
             <div className="mt-4">
               {activeTab === "recentlyAdded" && <RecentAddedEvents />}
               {activeTab === "newMembers" && <NewMembersTable />}
               {activeTab === "recentUpdates" && <RecentUpdates />}
+              {activeTab === "recentEvents" && <RecentAddedEvents />}
             </div>
           </div>
         </div>

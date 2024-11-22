@@ -5,10 +5,11 @@ const MemberCard = ({
   genre,
   mobile,
   events,
-  joinDate,
-  image,
+  join_date,
+  profile_image,
   status,
 }) => {
+  console.log(profile_image)
   return (
     <div className="bg-white rounded-lg shadow-md  w-80 mx-3 relative">
       {/* Glowing pulsing circle */}
@@ -25,7 +26,7 @@ const MemberCard = ({
       ></div>
       {/* Header Section with Image and Name */}
       <div className="pb-4 border-b border-[#FBEBF1] p-6">
-        <img src={image} alt={name} className="w-14 h-14 rounded-full" />
+        <img src={profile_image} alt={name} className="w-14 h-14 rounded-full" />
         <div>
           <h3 className="mt-2 text-lg font-bold " title={name}>
             {name}
@@ -39,7 +40,7 @@ const MemberCard = ({
         <div>
           <p className="font-semibold">Genre:</p>
           <div className="flex space-x-2 mt-2">
-            {genre.map((g, index) => (
+            {genre?.map((g, index) => (
               <span
                 key={index}
                 className="bg-pink-200 text-pink-700 px-2 py-1  text-xs font-semibold"
@@ -87,7 +88,7 @@ const MemberCard = ({
           </div>
           <div className="flex justify-between">
             <span>Joined Date</span>
-            <span className="font-semibold text-gray-800">{joinDate}</span>
+            <span className="font-semibold text-gray-800">{join_date}</span>
           </div>
         </div>
       </div>

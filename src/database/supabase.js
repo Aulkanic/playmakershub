@@ -309,3 +309,115 @@ export const fetchUserType = async (userId) => {
     throw error;
   }
 };
+
+export const fetchEvents = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('events') 
+      .select('*') 
+      .order('start_date', { ascending: true }); 
+
+    if (error) {
+      console.error('Error fetching events:', error);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error('Unexpected error fetching events:', err);
+    return null;
+  }
+};
+
+export const createMember = async (memberData) => {
+  try {
+    const { data, error } = await supabase
+      .from('members_orgs')
+      .insert([memberData]);
+
+    if (error) {
+      console.error('Error creating member:', error.message);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return null;
+  }
+};
+
+export const fetchMembers = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('members_orgs')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching members:', error.message);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return null;
+  }
+};
+
+export const fetchMemberById = async (id) => {
+  try {
+    const { data, error } = await supabase
+      .from('members_orgs')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching member by ID:', error.message);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return null;
+  }
+};
+
+export const updateMember = async (id, updatedData) => {
+  try {
+    const { data, error } = await supabase
+      .from('members_orgs')
+      .update(updatedData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating member:', error.message);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return null;
+  }
+};
+
+export const deleteMember = async (id) => {
+  try {
+    const { data, error } = await supabase
+      .from('members_orgs')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting member:', error.message);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return null;
+  }
+};
