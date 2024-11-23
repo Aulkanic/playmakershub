@@ -19,7 +19,7 @@ const MemberOrganization = () => {
     events: 0,
     join_date: "",
     status: "active",
-    profile_image:'',
+    profile_image: "",
     name: "",
   });
   const [roles, setRoles] = useState([]);
@@ -29,19 +29,18 @@ const MemberOrganization = () => {
 
   const loadMembers = async () => {
     const data = await fetchMembers();
-    console.log(data)
-    const list = data?.map((v) =>({
-      ...data,
+    const list = data?.map((v) => ({
+      ...v,
       genre: JSON.parse(v.genre),
       role: JSON.parse(v.role),
-    }))
+    }));
     if (list) {
       setMembers(list);
     }
   };
+
   // Fetch members from Supabase on component mount
   useEffect(() => {
-
     loadMembers();
   }, []);
 
@@ -49,8 +48,8 @@ const MemberOrganization = () => {
    * Filtered members based on status
    */
   const filteredMembers = members.filter((member) => {
-    if (filter === "all") return true;
-    return member.status === filter;
+    if (filter === "all") return true; // Show all members
+    return member.status === filter; // Filter by member's status
   });
 
   const handleCreateAccount = () => {
@@ -72,10 +71,9 @@ const MemberOrganization = () => {
       join_date: new Date().toISOString().split("T")[0],
       events: 0,
     };
-    console.log(memberData)
     const data = await createMember(memberData);
     if (data) {
-      loadMembers()
+      loadMembers(); // Reload members after adding
     }
     setIsModalOpen(false);
     setNewMember({
@@ -84,7 +82,7 @@ const MemberOrganization = () => {
       genre: [],
       mobile: "",
       status: "active",
-      profile_image:'',
+      profile_image: "",
       name: "",
     });
     setRoles([]);
@@ -92,7 +90,6 @@ const MemberOrganization = () => {
   };
 
   const handleViewDetails = (member) => {
-    console.log(member)
     setSelectedMember(member);
     setIsDetailsModalOpen(true);
   };
@@ -114,7 +111,7 @@ const MemberOrganization = () => {
     }
     setIsDetailsModalOpen(false);
   };
-  console.log(newMember)
+
   return (
     <div className="min-h-screen flex bg-[#FBEBF1]">
       <Sidebar />
@@ -145,21 +142,15 @@ const MemberOrganization = () => {
         </div>
 
         <div className="px-4 py-10 flex flex-wrap">
-          {filteredMembers.map((member,idx) => {
-              const info = {
-                ...member[idx.toString()],
-                genre: JSON.parse(member[idx.toString()].genre),
-                role: JSON.parse(member[idx.toString()].role),
-              }
-            return(
+          {filteredMembers.map((member, idx) => (
             <div
               key={idx}
               className="cursor-pointer"
-              onClick={() => handleViewDetails(info)}
+              onClick={() => handleViewDetails(member)}
             >
-              <MemberCard {...info} />
+              <MemberCard {...member} />
             </div>
-          )})}
+          ))}
         </div>
       </div>
 
@@ -191,3 +182,4 @@ const MemberOrganization = () => {
 };
 
 export default MemberOrganization;
+

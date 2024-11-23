@@ -4,7 +4,7 @@ import Sidebar from "../../../components/admin/Sidebar";
 import Header from "../../../components/admin/Header";
 import { supabase } from "../../../database/supabase";
 
-const AdminNotification = () => {
+const  AdminNotification = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

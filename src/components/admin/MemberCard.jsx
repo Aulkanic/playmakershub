@@ -9,7 +9,6 @@ const MemberCard = ({
   profile_image,
   status,
 }) => {
-  console.log(profile_image)
   return (
     <div className="bg-white rounded-lg shadow-md  w-80 mx-3 relative">
       {/* Glowing pulsing circle */}
