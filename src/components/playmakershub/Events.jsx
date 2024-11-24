@@ -7,7 +7,7 @@ const Events = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
 
   return (
-    <div className="bg-Radial bg-[#000000] h-screen">
+    <div className="bg-Radial bg-[#000000] min-h-screen">
       <AuthenticatedHeader />
       <main className="text-[#ffffff]">
         <div className="flex bg-green-500 p-5 gap-3">

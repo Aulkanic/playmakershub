@@ -1,11 +1,47 @@
 import { useEffect, useState } from "react";
-import { fetchPastEvents } from "../../database/supabase";
+import { fetchPastEvents, handleParticipation, supabase } from "../../database/supabase";
+import { toast } from "react-toastify";
 
 const DoneEvents = () => {
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [participationLoading, setParticipationLoading] = useState(null); // For participation loading
+  const [user, setUser] = useState(null); // Store logged-in user details
+  const [memberDetails, setMemberDetails] = useState(null); // Store member details from `members_orgs`
 
   useEffect(() => {
+    const getCurrentUser = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("Error fetching current user:", error.message);
+      } else {
+        setUser(user);
+        fetchMemberDetails(user?.id);
+      }
+    };
+
+    const fetchMemberDetails = async (authId) => {
+      try {
+        const { data, error } = await supabase
+          .from("members_orgs")
+          .select("*")
+          .eq("authid", authId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching member details:", error.message);
+        } else {
+          setMemberDetails(data);
+        }
+      } catch (err) {
+        console.error("Error fetching member details:", err.message);
+      }
+    };
+
     const getPastEvents = async () => {
       try {
         const data = await fetchPastEvents();
@@ -17,8 +53,44 @@ const DoneEvents = () => {
       }
     };
 
+    getCurrentUser();
     getPastEvents();
   }, []);
+
+  const handleParticipate = async (role, eventId) => {
+    if (!user) {
+      toast.error("User not logged in.");
+      return;
+    }
+
+    if (!memberDetails) {
+      toast.error("Member details not found.");
+      return;
+    }
+
+    const memberRoles = JSON.parse(memberDetails.role || "[]");
+    if (!memberRoles.includes(role)) {
+      toast.error(`You do not have the role '${role}' to participate.`);
+      return;
+    }
+
+    setParticipationLoading(eventId); // Start loading for this event
+    try {
+      const response = await handleParticipation(user.id, eventId, role);
+      if (response.success) {
+        toast.success(response.message);
+        const refreshedData = await fetchPastEvents();
+        setPastEvents(refreshedData);
+      } else {
+        toast.error(response.message);
+      }
+    } catch (error) {
+      console.error("Error in participation:", error);
+      toast.error("An error occurred while participating.");
+    } finally {
+      setParticipationLoading(null); // End loading
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
 
@@ -28,24 +100,82 @@ const DoneEvents = () => {
         pastEvents.map((event) => (
           <div
             key={event.event_id}
-            className="bg-gray-800 p-4 rounded shadow-md"
+            className="bg-white shadow-lg rounded-lg overflow-hidden"
           >
-            <h3 className="text-xl font-bold text-white">
-              {event.event_title}
-            </h3>
-            <p className="text-gray-400">
-              {new Date(event.start_date).toLocaleDateString()} -{" "}
-              {new Date(event.end_date).toLocaleDateString()} |{" "}
-              {event.bookings.event_location}
-            </p>
-            <p className="text-gray-300">
-              Organizer: {event.bookings.organizer_first_name}{" "}
-              {event.bookings.organizer_last_name}
-            </p>
-            <p className="text-gray-300">
-              Total Musicians Required: {event.totalMusicians}
-            </p>
-            <p className="text-blue-500 cursor-pointer">View Details</p>
+            {/* Image Section */}
+            <div className="h-40 bg-gray-200">
+              <img
+                src="https://via.placeholder.com/400x200?text=Event+Image"
+                alt={event.event_title}
+                className="object-cover w-full h-full"
+              />
+            </div>
+
+            {/* Event Details */}
+            <div className="p-4">
+              <h3 className="text-lg font-bold text-gray-800">
+                {event.event_title}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {new Date(event.start_date).toLocaleDateString()} -{" "}
+                {new Date(event.end_date).toLocaleDateString()} |{" "}
+                {event.bookings.event_location}
+              </p>
+              <p className="text-sm text-gray-500">
+                Organizer: {event.bookings.organizer_first_name}{" "}
+                {event.bookings.organizer_last_name}
+              </p>
+              <p className="text-sm text-gray-500">
+                Total Musicians Required: {event.totalMusicians}
+              </p>
+
+              {/* Roles Section */}
+              <div className="mt-4">
+                <h4 className="text-md font-semibold text-gray-700">
+                  Roles Needed:
+                </h4>
+                {Object.entries(event.musicians).map(([role, data], index) => (
+                  <div key={index} className="mb-4">
+                    <div className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                      <span className="text-gray-700 font-medium capitalize">
+                        {role} ({data.required})
+                      </span>
+                      <button
+                        onClick={() => handleParticipate(role, event.event_id)}
+                        className={`text-sm text-white px-4 py-1 rounded ${
+                          participationLoading === event.event_id
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-blue-500 hover:bg-blue-600"
+                        }`}
+                        disabled={participationLoading === event.event_id}
+                      >
+                        {participationLoading === event.event_id
+                          ? "Loading..."
+                          : "Participate"}
+                      </button>
+                    </div>
+                    {/* Display participants */}
+                    <div className="mt-2">
+                      {data.participants.map((participant, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 bg-gray-50 p-2 rounded"
+                        >
+                          <img
+                            src={participant.profileImage || "https://via.placeholder.com/40"}
+                            alt={participant.name}
+                            className="w-10 h-10 rounded-full"
+                          />
+                          <span className="text-gray-700 font-medium">
+                            {participant.name || "Anonymous"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ))
       ) : (

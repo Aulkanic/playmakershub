@@ -119,7 +119,7 @@ const EventManagement = () => {
           </div>
 
           {/* Content Based on Active Tab */}
-          <div className="mt-4 max-h-[calc(100vh-180px)] overflow-y-auto">
+          <div className="mt-4 min-h-screen">
             {activeTab === "PendingEvents" && <PendingEvents />}
             {activeTab === "AcceptedEvents" && <AcceptedEvents />}
             {activeTab === "PastEvents" && <PastEvents />}

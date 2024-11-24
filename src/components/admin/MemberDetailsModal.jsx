@@ -18,7 +18,7 @@ const MemberDetailsModal = ({ member, onClose, onUpdate, onDelete }) => {
     };
   }, [onClose]);
 
-  const handleClickOutside = (event) => {
+  const handleClickOutside = (event) => { 
     if (event.target.id === "modal-overlay") {
       onClose();
     }
@@ -160,7 +160,7 @@ const MemberDetailsModal = ({ member, onClose, onUpdate, onDelete }) => {
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="warning">Warning</option>
+                <option value="probationary">Probationary</option>
               </select>
             ) : (
               <>

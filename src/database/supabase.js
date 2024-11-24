@@ -191,6 +191,15 @@ export const retrieveOngoingEvents = async () => {
           vocalists,
           bassist,
           percussionist
+        ),
+        participation (
+          members_orgs (
+            email,
+            name,
+            profile_image
+          ),
+          musician_role,
+          status
         )
       `
       )
@@ -199,19 +208,54 @@ export const retrieveOngoingEvents = async () => {
     if (error) throw error;
 
     return data.map((event) => {
-      // Get the first musician entry from the array
       const musicianData = event.musicians_required[0] || {};
 
+      const roles = {
+        guitarist: {
+          required: musicianData.guitarist || 0,
+          participants: [],
+        },
+        keyboardist: {
+          required: musicianData.keyboardist || 0,
+          participants: [],
+        },
+        vocalists: {
+          required: musicianData.vocalists || 0,
+          participants: [],
+        },
+        bassist: {
+          required: musicianData.bassist || 0,
+          participants: [],
+        },
+        percussionist: {
+          required: musicianData.percussionist || 0,
+          participants: [],
+        },
+      };
+
+      (event.participation || []).forEach((participant) => {
+        const role = participant.musician_role.toLowerCase();
+        if (roles[role]) {
+          roles[role].participants.push({
+            email: participant.members_orgs.email,
+            name: participant.members_orgs.name,
+            profileImage: participant.members_orgs.profile_image,
+            status: participant.status,
+          });
+        }
+      });
+
       const totalMusicians =
-        (musicianData.guitarist || 0) +
-        (musicianData.keyboardist || 0) +
-        (musicianData.vocalists || 0) +
-        (musicianData.bassist || 0) +
-        (musicianData.percussionist || 0);
+        roles.guitarist.required +
+        roles.keyboardist.required +
+        roles.vocalists.required +
+        roles.bassist.required +
+        roles.percussionist.required;
 
       return {
         ...event,
         totalMusicians,
+        musicians: roles,
       };
     });
   } catch (error) {
@@ -260,30 +304,63 @@ export const fetchPastEvents = async () => {
           vocalists,
           bassist,
           percussionist
+        ),
+        participation (
+          user_id,
+          musician_role,
+          status,
+          members_orgs (
+            name,
+            email,
+            mobile,
+            role,
+            profile_image
+          )
         )
       `
       )
-      .lt("end_date", new Date().toISOString()) // Filtering for past events
+      .lt("end_date", new Date().toISOString()) 
       .order("end_date", { ascending: false });
 
     if (error) throw error;
 
-    // Map through events to calculate total musicians required if needed
     return data.map((event) => {
-      // handle missing musicians_required data
-      const musicianData = event.musicians_required[0] || {};
+      const musicians = {
+        guitarist: { required: 0, participants: [] },
+        keyboardist: { required: 0, participants: [] },
+        vocalists: { required: 0, participants: [] },
+        bassist: { required: 0, participants: [] },
+        percussionist: { required: 0, participants: [] },
+      };
 
-      // Calculate total musicians needed
-      const totalMusicians =
-        (musicianData.guitarist || 0) +
-        (musicianData.keyboardist || 0) +
-        (musicianData.vocalists || 0) +
-        (musicianData.bassist || 0) +
-        (musicianData.percussionist || 0);
+      if (event.musicians_required.length > 0) {
+        const requiredData = event.musicians_required[0];
+        Object.keys(musicians).forEach((role) => {
+          if (requiredData[role] !== undefined) {
+            musicians[role].required = requiredData[role];
+          }
+        });
+      }
+
+      if (event.participation.length > 0) {
+        event.participation.forEach((participant) => {
+          const role = participant.musician_role.toLowerCase();
+          if (musicians[role]) {
+            musicians[role].participants.push({
+              userId: participant.user_id,
+              name: participant.members_orgs?.name || "Unknown",
+              email: participant.members_orgs?.email || "Unknown",
+              mobile: participant.members_orgs?.mobile || "Unknown",
+              profileImage: participant.members_orgs?.profile_image || null,
+              status: participant.status,
+            });
+          }
+        });
+      }
 
       return {
         ...event,
-        totalMusicians,
+        musicians,
       };
     });
   } catch (error) {
@@ -291,6 +368,8 @@ export const fetchPastEvents = async () => {
     throw error;
   }
 };
+
+
 
 // new
 export const fetchUserType = async (userId) => {
@@ -421,3 +500,32 @@ export const deleteMember = async (id) => {
     return null;
   }
 };
+
+// Function to handle participation
+export const handleParticipation =async(userId, eventId, musicianRole) =>{
+  try {
+    const { data: participation, error: participationError } = await supabase
+      .from("participation")
+      .insert({
+        user_id: userId,
+        event_id: eventId,
+        musician_role: musicianRole,
+        status: "Pending", 
+      });
+
+    if (participationError) {
+      throw new Error("Error inserting participation: " + participationError.message);
+    }
+
+    return {
+      success: true,
+      message: "Participation recorded successfully.",
+    };
+  } catch (error) {
+    console.error(error.message);
+    return {
+      success: false,
+      message: error.message,
+    };
+  }
+}

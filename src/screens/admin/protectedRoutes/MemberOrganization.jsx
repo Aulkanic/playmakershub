@@ -5,14 +5,18 @@ import MemberForm from "../../../components/admin/Reusable/MemberForm";
 import MemberDetailsModal from "../../../components/admin/MemberDetailsModal";
 import Sidebar from "../../../components/admin/Sidebar";
 import Header from "../../../components/admin/Header"; // Adjust the path as needed
-import { createMember, deleteMember, fetchMembers, updateMember } from "../../../database/supabase";
+import { deleteMember, fetchMembers, supabase, updateMember } from "../../../database/supabase";
+import { toast } from "react-toastify";
+import sendEmail from "../../../database/sendEmail";
 
 const MemberOrganization = () => {
   const [members, setMembers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false); // New loading state
   const [newMember, setNewMember] = useState({
     email: "",
+    password: "",
     role: [],
     genre: [],
     mobile: "",
@@ -28,28 +32,31 @@ const MemberOrganization = () => {
   const [filter, setFilter] = useState("all");
 
   const loadMembers = async () => {
-    const data = await fetchMembers();
-    const list = data?.map((v) => ({
-      ...v,
-      genre: JSON.parse(v.genre),
-      role: JSON.parse(v.role),
-    }));
-    if (list) {
-      setMembers(list);
+    try {
+      setLoading(true); // Start loading
+      const data = await fetchMembers();
+      const list = data?.map((v) => ({
+        ...v,
+        genre: JSON.parse(v.genre),
+        role: JSON.parse(v.role),
+      }));
+      if (list) {
+        setMembers(list);
+      }
+    } catch (error) {
+      console.error("Error loading members:", error.message);
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
-  // Fetch members from Supabase on component mount
   useEffect(() => {
     loadMembers();
   }, []);
 
-  /**
-   * Filtered members based on status
-   */
   const filteredMembers = members.filter((member) => {
-    if (filter === "all") return true; // Show all members
-    return member.status === filter; // Filter by member's status
+    if (filter === "all") return true;
+    return member.status === filter;
   });
 
   const handleCreateAccount = () => {
@@ -62,32 +69,62 @@ const MemberOrganization = () => {
     setSelectedMember(null);
   };
 
-  // Add a new member
   const handleSubmit = async () => {
-    const memberData = {
-      ...newMember,
-      role: roles,
-      genre: genres,
-      join_date: new Date().toISOString().split("T")[0],
-      events: 0,
-    };
-    const data = await createMember(memberData);
-    if (data) {
-      loadMembers(); // Reload members after adding
+    try {
+      setLoading(true); 
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newMember.email,
+        password: newMember.password,
+      });
+  
+      if (authError) {
+        console.error("Authentication error:", authError.message);
+        toast.error("Failed to create user in authentication.");
+        return;
+      }
+  
+      const { password, ...memberData } = {
+        ...newMember,
+        role: roles,
+        genre: genres,
+        join_date: new Date().toISOString().split("T")[0],
+        events: 0,
+        authid: authData.user.id, 
+      };
+      console.log(password)
+      const { error: memberError } = await supabase
+        .from("members_orgs")
+        .insert(memberData);
+  
+      if (memberError) {
+        console.error("Error inserting into members_orgs:", memberError.message);
+        toast.error("Failed to save member data.");
+        return;
+      }
+  
+      toast.success("Member created successfully!");
+      loadMembers();
+      setIsModalOpen(false);
+      setNewMember({
+        email: "",
+        password: "",
+        role: [],
+        genre: [],
+        mobile: "",
+        status: "active",
+        profile_image: "",
+        name: "",
+      });
+      setRoles([]);
+      setGenres([]);
+    } catch (error) {
+      console.error("Error in handleSubmit:", error.message);
+      toast.error("An error occurred while creating the member.");
+    } finally {
+      setLoading(false); 
     }
-    setIsModalOpen(false);
-    setNewMember({
-      email: "",
-      role: [],
-      genre: [],
-      mobile: "",
-      status: "active",
-      profile_image: "",
-      name: "",
-    });
-    setRoles([]);
-    setGenres([]);
   };
+  
 
   const handleViewDetails = (member) => {
     setSelectedMember(member);
@@ -95,21 +132,53 @@ const MemberOrganization = () => {
   };
 
   const handleUpdateMember = async (id, updatedData) => {
-    const data = await updateMember(id, updatedData);
-    if (data) {
-      setMembers(
-        members.map((member) => (member.id === id ? { ...member, ...updatedData } : member))
-      );
+    try {
+      setLoading(true);
+      console.log(updatedData)
+      await updateMember(id, updatedData);
+      if (updatedData.status && updatedData.status !== "active") {
+        console.log('here1')
+        const member = members.find((member) => member.id === id);
+        const recipientEmail = member.email;
+        const subject = "Account Status Update";
+        const content = `Hello ${member.name},<br/><br/>
+        This is to inform you that your account status has been updated to <b>${updatedData.status}</b>.
+        <br/><br/>If you have any questions, please contact support.<br/><br/>
+        Best regards,<br/>
+        Playmakers Admin`;
+        console.log(recipientEmail)
+        const emailResponse = await sendEmail(recipientEmail, subject, content);
+        console.log(emailResponse)
+        if (emailResponse.error) {
+          toast.error("Failed to send email notification.");
+        } else {
+          toast.success("Email notification sent successfully.");
+        }
+      }
+  
+      setIsDetailsModalOpen(false);
+    } catch (error) {
+      console.error("Error updating member:", error.message);
+      toast.error("An error occurred while updating the member.");
+    } finally {
+      setLoading(false); // End loading
     }
-    setIsDetailsModalOpen(false);
   };
+  
 
   const handleDeleteMember = async (id) => {
-    const data = await deleteMember(id);
-    if (data) {
-      setMembers(members.filter((member) => member.id !== id));
+    try {
+      setLoading(true); // Start loading
+      const data = await deleteMember(id);
+      if (data) {
+        setMembers(members.filter((member) => member.id !== id));
+      }
+      setIsDetailsModalOpen(false);
+    } catch (error) {
+      console.error("Error deleting member:", error.message);
+    } finally {
+      setLoading(false); // End loading
     }
-    setIsDetailsModalOpen(false);
   };
 
   return (
@@ -121,7 +190,7 @@ const MemberOrganization = () => {
         <div className="px-8 py-4 flex items-center justify-between">
           {/* Filter Buttons */}
           <div className="flex space-x-4">
-            {["all", "active", "inactive", "warning"].map((status) => (
+            {["all", "active", "inactive", "probationary"].map((status) => (
               <button
                 key={status}
                 className={`px-4 py-2 ${
@@ -141,17 +210,27 @@ const MemberOrganization = () => {
           </button>
         </div>
 
-        <div className="px-4 py-10 flex flex-wrap">
-          {filteredMembers.map((member, idx) => (
-            <div
-              key={idx}
-              className="cursor-pointer"
-              onClick={() => handleViewDetails(member)}
-            >
-              <MemberCard {...member} />
-            </div>
-          ))}
-        </div>
+        {/* Loading Indicator */}
+        {loading ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-[#5C1B33]"></div>
+            <p className="ml-4 text-lg font-medium text-[#5C1B33]">
+              Loading, please wait...
+            </p>
+          </div>
+        ) : (
+          <div className="px-4 py-10 flex flex-wrap">
+            {filteredMembers.map((member, idx) => (
+              <div
+                key={idx}
+                className="cursor-pointer"
+                onClick={() => handleViewDetails(member)}
+              >
+                <MemberCard {...member} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modal for Adding Member */}
@@ -161,6 +240,7 @@ const MemberOrganization = () => {
           setNewMember={setNewMember}
           roles={roles}
           setRoles={setRoles}
+          loading={loading}
           genres={genres}
           setGenres={setGenres}
           handleSubmit={handleSubmit}
@@ -173,7 +253,9 @@ const MemberOrganization = () => {
           member={selectedMember}
           isOpen={isDetailsModalOpen}
           onClose={closeModal}
-          onUpdate={(updatedData) => handleUpdateMember(selectedMember.id, updatedData)}
+          onUpdate={(updatedData) =>
+            handleUpdateMember(selectedMember.id, updatedData)
+          }
           onDelete={() => handleDeleteMember(selectedMember.id)}
         />
       )}
@@ -182,4 +264,3 @@ const MemberOrganization = () => {
 };
 
 export default MemberOrganization;
-

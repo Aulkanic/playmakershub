@@ -9,6 +9,7 @@ const MemberForm = ({
   setRoles,
   genres,
   setGenres,
+  loading,
   handleSubmit,
 }) => {
   const [newRole, setNewRole] = useState("");
@@ -65,6 +66,11 @@ const MemberForm = ({
     if (!profilePicture)
       validationErrors.profilePicture = "Profile picture is required.";
 
+    if (!newMember.password) {
+      validationErrors.password = "Password is required.";
+    } else if (newMember.password.length < 8) {
+      validationErrors.password = "Password must be at least 8 characters long.";
+    }
     setErrors(validationErrors);
     return Object.keys(validationErrors).length === 0;
   };
@@ -89,7 +95,6 @@ const MemberForm = ({
       const manualPublicURL = `${import.meta.env.VITE_IMG_URL}/${
         uploadData.path
       }`;
-      console.log("Public URL:", manualPublicURL);
       toast.success("Profile picture uploaded successfully!");
       setNewMember((prev) => ({
         ...prev,
@@ -144,6 +149,25 @@ const MemberForm = ({
         />
         {errors.email && (
           <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+        )}
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Password
+        </label>
+        <input
+          type="password"
+          name="password"
+          value={newMember.password}
+          onChange={handleInputChange}
+          className={`mt-1 block w-full border ${
+            errors.password ? "border-red-500" : "border-gray-300"
+          } rounded-md shadow-sm py-2 px-3`}
+          placeholder="Enter password"
+        />
+        {errors.password && (
+          <p className="text-red-500 text-sm mt-1">{errors.password}</p>
         )}
       </div>
 
@@ -264,9 +288,10 @@ const MemberForm = ({
 
       <button
         type="submit"
+        disabled={loading}
         className="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
       >
-        Submit
+       {loading ? 'Submitting' : 'Submit'}
       </button>
       <ToastContainer position="top-right" autoClose={3000} />
     </form>

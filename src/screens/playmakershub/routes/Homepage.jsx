@@ -16,6 +16,7 @@ const Homepage = () => {
   const [popupVisible, setPopupVisible] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [bookingID, setBookingID] = useState(null);
+  const [isJoinEnabled, setIsJoinEnabled] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [fetchedData, setFetchedData] = useState(null);
   const [enteredBookingID, setEnteredBookingID] = useState("");
@@ -60,6 +61,24 @@ const Homepage = () => {
       window.location.reload();
     }
   };
+
+  useEffect(() => {
+    const fetchJoinStatus = async () => {
+      try {
+        const { data, error } = await supabase.from("join").select("isOpen").single();
+
+        if (error) {
+          console.error("Error fetching join status:", error.message);
+        } else {
+          setIsJoinEnabled(data?.isOpen); 
+        }
+      } catch (err) {
+        console.error("Unexpected error fetching join status:", err.message);
+      }
+    };
+
+    fetchJoinStatus();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -346,7 +365,17 @@ const Homepage = () => {
             Booking
           </button>
 
-          <button className="text-[#FFFFFF] text-2xl font-medium hover:text-[#a83c70]">
+          <button
+            disabled={!isJoinEnabled} // Disable button when isJoinEnabled is false
+            className={`text-[#FFFFFF] text-2xl font-medium ${
+              isJoinEnabled ? "hover:text-[#a83c70]" : "cursor-not-allowed text-gray-500"
+            }`}
+            onClick={() => {
+              if (isJoinEnabled) {
+                toast.info("Join functionality is coming soon!");
+              }
+            }}
+          >
             Join us
           </button>
         </nav>

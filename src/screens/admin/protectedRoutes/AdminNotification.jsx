@@ -89,7 +89,8 @@ const  AdminNotification = () => {
         console.error("Error fetching participants:", participantsError);
         return;
       }
-  
+      console.log(participants.length)
+      console.log(totalRequired)
       if (participants.length >= totalRequired) {
         const { data: existingNotification } = await supabase
           .from("notifications")
