@@ -366,7 +366,7 @@ const Homepage = () => {
           </button>
 
           <button
-            disabled={!isJoinEnabled} // Disable button when isJoinEnabled is false
+            disabled={!isJoinEnabled} 
             className={`text-[#FFFFFF] text-2xl font-medium ${
               isJoinEnabled ? "hover:text-[#a83c70]" : "cursor-not-allowed text-gray-500"
             }`}

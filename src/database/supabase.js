@@ -504,7 +504,7 @@ export const deleteMember = async (id) => {
 // Function to handle participation
 export const handleParticipation =async(userId, eventId, musicianRole) =>{
   try {
-    const { data: participation, error: participationError } = await supabase
+    const { error: participationError } = await supabase
       .from("participation")
       .insert({
         user_id: userId,

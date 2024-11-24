@@ -93,9 +93,8 @@ const AuthenticatedHeader = () => {
         return;
       }
   
-      console.log(updatedProfile);
   
-      const { data, error } = await supabase
+      const {  error } = await supabase
         .from("members_orgs")
         .update({
           name: updatedProfile?.name || "", 
