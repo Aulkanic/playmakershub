@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { fetchPastEvents, handleParticipation, supabase } from "../../database/supabase";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 
 const DoneEvents = () => {
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [participationLoading, setParticipationLoading] = useState(null); // For participation loading
-  const [user, setUser] = useState(null); // Store logged-in user details
-  const [memberDetails, setMemberDetails] = useState(null); // Store member details from `members_orgs`
+  const [participationLoading, setParticipationLoading] = useState(null); 
+  const [user, setUser] = useState(null); 
+  const [memberDetails, setMemberDetails] = useState(null);
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -58,6 +58,7 @@ const DoneEvents = () => {
   }, []);
 
   const handleParticipate = async (role, eventId) => {
+    console.log('here')
     if (!user) {
       toast.error("User not logged in.");
       return;
@@ -73,8 +74,8 @@ const DoneEvents = () => {
       toast.error(`You do not have the role '${role}' to participate.`);
       return;
     }
-
-    setParticipationLoading(eventId); // Start loading for this event
+    console.log('her1')
+    setParticipationLoading(eventId); 
     try {
       const response = await handleParticipation(user.id, eventId, role);
       if (response.success) {
@@ -181,6 +182,7 @@ const DoneEvents = () => {
       ) : (
         <p className="text-white">No past events available</p>
       )}
+         <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };
