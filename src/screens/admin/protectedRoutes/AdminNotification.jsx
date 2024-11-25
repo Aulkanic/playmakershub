@@ -43,7 +43,8 @@ const  AdminNotification = () => {
     try {
       const { data: events, error: eventsError } = await supabase
         .from("events")
-        .select("event_id");
+        .select("event_id")
+        .is("user_id", null);
 
       if (eventsError) {
         console.error("Error fetching events:", eventsError);
@@ -89,8 +90,7 @@ const  AdminNotification = () => {
         console.error("Error fetching participants:", participantsError);
         return;
       }
-      console.log(participants.length)
-      console.log(totalRequired)
+
       if (participants.length >= totalRequired) {
         const { data: existingNotification } = await supabase
           .from("notifications")

@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import { retrieveOngoingEvents, handleParticipation, supabase } from "../../database/supabase";
+import {
+  retrieveOngoingEvents,
+  handleParticipation,
+  supabase,
+} from "../../database/supabase";
 
 const UpcomingEvents = () => {
   const [events, setEvents] = useState([]);
@@ -57,7 +61,7 @@ const UpcomingEvents = () => {
     fetchOngoingEvents();
   }, []);
 
-  const handleParticipate = async (role, eventId) => {
+  const handleParticipate = async (role, event) => {
     if (!user) {
       toast.error("User not logged in.");
       return;
@@ -74,9 +78,14 @@ const UpcomingEvents = () => {
       return;
     }
 
-    setParticipationLoading(eventId);
+    setParticipationLoading(event.eventId);
     try {
-      const response = await handleParticipation(user.id, eventId, role);
+      const response = await handleParticipation(
+        user.id,
+        event,
+        role,
+        memberDetails
+      );
       if (response.success) {
         toast.success(response.message);
         const refreshedEvents = await retrieveOngoingEvents();
@@ -96,7 +105,9 @@ const UpcomingEvents = () => {
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 p-6">
-      <h2 className="text-2xl font-bold mb-6 text-center col-span-full">Upcoming Events</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center col-span-full">
+        Upcoming Events
+      </h2>
       {events.length > 0 ? (
         events.map((event) => (
           <div
@@ -135,52 +146,82 @@ const UpcomingEvents = () => {
                 <h4 className="text-md font-semibold text-gray-700">
                   Roles Needed:
                 </h4>
-                {Object.entries(event.musicians).map(([role, data], index) => (
-                  <div key={index} className="mb-4">
-                    <div className="flex justify-between items-center bg-gray-100 p-2 rounded">
-                      <span className="text-gray-700 font-medium capitalize">
-                        {role} ({data.required})
-                      </span>
-                      <button
-                        onClick={() => handleParticipate(role, event.event_id)}
-                        className={`text-sm text-white px-4 py-1 rounded ${
-                          participationLoading === event.event_id
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-500 hover:bg-blue-600"
-                        }`}
-                        disabled={participationLoading === event.event_id}
-                      >
-                        {participationLoading === event.event_id
-                          ? "Loading..."
-                          : "Participate"}
-                      </button>
-                    </div>
-                    {/* Display participants */}
-                    <div className="mt-2">
-                      {data.participants.map((participant, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 bg-gray-50 p-2 rounded"
-                        >
-                          <img
-                            src={participant.profileImage || "https://via.placeholder.com/40"}
-                            alt={participant.name}
-                            className="w-10 h-10 rounded-full"
-                          />
-                          <span className="text-gray-700 font-medium">
-                            {participant.name || "Anonymous"}
+                {Object.entries(event.musicians)
+                  // eslint-disable-next-line no-unused-vars
+                  .filter(([_, data]) => data.required > 0)
+                  .map(([role, data], index) => {
+                    const alreadyParticipated = data.participants.some(
+                      (participant) => participant.id === user?.id
+                    );
+                    const isRoleFull =
+                      data.participants.length >= data.required;
+                    return (
+                      <div key={index} className="mb-4">
+                        <div className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                          <span className="text-gray-700 font-medium capitalize">
+                            {role} ({data.required})
                           </span>
+                          {isRoleFull  ? (
+                            <span className="text-sm text-red-500 font-medium">
+                              Full
+                            </span>
+                          ) : (
+                            !alreadyParticipated && (
+                              <button
+                                onClick={() => handleParticipate(role, event)}
+                                className={`text-sm text-white px-4 py-1 rounded ${
+                                  participationLoading === event.event_id
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-blue-500 hover:bg-blue-600"
+                                }`}
+                                disabled={
+                                  participationLoading === event.event_id
+                                }
+                              >
+                                {participationLoading === event.event_id
+                                  ? "Loading..."
+                                  : "Participate"}
+                              </button>
+                            )
+                          )}
+                          {alreadyParticipated && (
+                            <span className="text-sm text-green-500 font-medium">
+                              Joined
+                            </span>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                        {/* Display participants */}
+                        <div className="mt-2">
+                          {data.participants.map((participant, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 bg-gray-50 p-2 rounded"
+                            >
+                              <img
+                                src={
+                                  participant.profileImage ||
+                                  "https://via.placeholder.com/40"
+                                }
+                                alt={participant.name}
+                                className="w-10 h-10 rounded-full"
+                              />
+                              <span className="text-gray-700 font-medium">
+                                {participant.name || "Anonymous"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </div>
         ))
       ) : (
-        <p className="text-gray-700 col-span-full text-center">No upcoming events available</p>
+        <p className="text-gray-700 col-span-full text-center">
+          No upcoming events available
+        </p>
       )}
       <ToastContainer position="top-right" autoClose={3000} />
     </div>

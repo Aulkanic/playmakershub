@@ -136,7 +136,7 @@ const MemberOrganization = () => {
       setLoading(true);
       console.log(updatedData)
       await updateMember(id, updatedData);
-      if (updatedData.status && updatedData.status !== "active") {
+      if (updatedData.status && updatedData.status !== "active" ) {
         console.log('here1')
         const member = members.find((member) => member.id === id);
         const recipientEmail = member.email;

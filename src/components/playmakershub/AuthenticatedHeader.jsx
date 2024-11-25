@@ -11,7 +11,7 @@ const AuthenticatedHeader = () => {
   const [isPopoverVisible, setIsPopoverVisible] = useState(false); // Popover visibility
   const [isModalOpen, setIsModalOpen] = useState(false); // Modal visibility
   const [updatedProfile, setUpdatedProfile] = useState({}); // Form data for edit profile
-
+  console.log(memberDetails)
   const getCurrentUser = async () => {
     const {
       data: { user },
@@ -148,13 +148,22 @@ const AuthenticatedHeader = () => {
 
       <div className="relative">
         {/* User Profile Image */}
+        <div className="flex gap-1 items-center w-40">
         <img
           src={memberDetails?.profile_image || "https://via.placeholder.com/40"}
           alt="User Profile"
           className="w-12 h-12 rounded-full object-cover cursor-pointer"
           onClick={togglePopover}
         />
-
+          <div className="flex flex-col items-start w-full">
+          <p className="font-bold text-white whitespace-nowrap truncate">{memberDetails?.name || "User"}</p>
+          <p className={`text-sm font-medium ${
+            memberDetails?.status === "active" ? "text-green-500" : "text-red-500"
+          }`}>
+            {memberDetails?.status || "Inactive"}
+          </p>
+          </div>
+        </div>
         {/* Popover Menu */}
         {isPopoverVisible && (
           <div className="absolute right-0 mt-2 bg-white shadow-lg rounded-md w-48 z-10">

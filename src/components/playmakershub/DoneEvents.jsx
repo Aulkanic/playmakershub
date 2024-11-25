@@ -56,28 +56,27 @@ const DoneEvents = () => {
     getCurrentUser();
     getPastEvents();
   }, []);
-
-  const handleParticipate = async (role, eventId) => {
-    console.log('here')
+  const handleParticipate = async (role, event) => {
     if (!user) {
       toast.error("User not logged in.");
       return;
     }
-
+  
     if (!memberDetails) {
       toast.error("Member details not found.");
       return;
     }
-
+  
     const memberRoles = JSON.parse(memberDetails.role || "[]");
     if (!memberRoles.includes(role)) {
       toast.error(`You do not have the role '${role}' to participate.`);
       return;
     }
-    console.log('her1')
-    setParticipationLoading(eventId); 
+  
+    setParticipationLoading(event.eventId);
+  
     try {
-      const response = await handleParticipation(user.id, eventId, role);
+      const response = await handleParticipation(user.id, event, role,memberDetails);  
       if (response.success) {
         toast.success(response.message);
         const refreshedData = await fetchPastEvents();
@@ -92,6 +91,7 @@ const DoneEvents = () => {
       setParticipationLoading(null); // End loading
     }
   };
+  console.log(memberDetails)
 
   if (loading) return <div>Loading...</div>;
 
@@ -135,46 +135,64 @@ const DoneEvents = () => {
                 <h4 className="text-md font-semibold text-gray-700">
                   Roles Needed:
                 </h4>
-                {Object.entries(event.musicians).map(([role, data], index) => (
-                  <div key={index} className="mb-4">
-                    <div className="flex justify-between items-center bg-gray-100 p-2 rounded">
-                      <span className="text-gray-700 font-medium capitalize">
-                        {role} ({data.required})
-                      </span>
-                      <button
-                        onClick={() => handleParticipate(role, event.event_id)}
-                        className={`text-sm text-white px-4 py-1 rounded ${
-                          participationLoading === event.event_id
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-500 hover:bg-blue-600"
-                        }`}
-                        disabled={participationLoading === event.event_id}
-                      >
-                        {participationLoading === event.event_id
-                          ? "Loading..."
-                          : "Participate"}
-                      </button>
-                    </div>
-                    {/* Display participants */}
-                    <div className="mt-2">
-                      {data.participants.map((participant, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 bg-gray-50 p-2 rounded"
-                        >
-                          <img
-                            src={participant.profileImage || "https://via.placeholder.com/40"}
-                            alt={participant.name}
-                            className="w-10 h-10 rounded-full"
-                          />
-                          <span className="text-gray-700 font-medium">
-                            {participant.name || "Anonymous"}
+                {Object.entries(event.musicians)
+                // eslint-disable-next-line no-unused-vars
+                .filter(([_, data]) => data.required > 0) 
+                .map(([role, data], index) => {
+                  const alreadyParticipated = data.participants.some(
+                    (participant) => participant.userId === user?.id
+                  );
+                  return (
+                    <div key={index} className="mb-4">
+                      <div className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                        <span className="text-gray-700 font-medium capitalize">
+                          {role} ({data.required})
+                        </span>
+                        {!alreadyParticipated && (
+                          <button
+                            onClick={() => handleParticipate(role, event)}
+                            className={`text-sm text-white px-4 py-1 rounded ${
+                              participationLoading === event.event_id
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-blue-500 hover:bg-blue-600"
+                            }`}
+                            disabled={participationLoading === event.event_id || alreadyParticipated}
+                          >
+                            {participationLoading === event.event_id
+                              ? "Loading..."
+                              : "Participate"}
+                          </button>
+                        )}
+                        {alreadyParticipated && (
+                          <span className="text-sm text-green-500 font-medium">
+                            Joined
                           </span>
-                        </div>
-                      ))}
+                        )}
+                      </div>
+                      {/* Display participants */}
+                      <div className="mt-2">
+                        {data.participants.map((participant, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 bg-gray-50 p-2 rounded"
+                          >
+                            <img
+                              src={
+                                participant.profileImage ||
+                                "https://via.placeholder.com/40"
+                              }
+                              alt={participant.name}
+                              className="w-10 h-10 rounded-full"
+                            />
+                            <span className="text-gray-700 font-medium">
+                              {participant.name || "Anonymous"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
