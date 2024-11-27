@@ -4,9 +4,10 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import LinearProgress from "@mui/material/LinearProgress";
 import { useState } from "react";
-import { supabase, updateEventStatus } from "../../database/supabase";
+import { supabase, updateEventStatus, updateEventStatusToPublished } from "../../database/supabase";
 import sendEmail from "../../database/sendEmail";
 import { formatDateTime } from "./Reusable/FormatDate";
+import { useNavigate } from "react-router-dom";
 
 const EventCard = ({
   eventId,
@@ -24,12 +25,14 @@ const EventCard = ({
   participants,
   maxParticipants,
 }) => {
+  const navigate = useNavigate()
   const [participationFilter, setParticipationFilter] =
     useState("Open to anyone");
 
   // Determine the event status for specific styling and behavior
   const isRejected = status === "Rejected";
   const isAccepted = status === "Accepted";
+  const isPublished = status === "Published";
   const isPending = status === "Pending";
   const isOngoing = status === "Ongoing";
 
@@ -97,10 +100,8 @@ const EventCard = ({
     }
   };
 
-  // Function to handle rejecting an event
   const handleRejectEvent = async (eventId, organizerEmail, eventTitle) => {
     try {
-      // Update the event status to 'Rejected'
       const { error } = await supabase
         .from("events")
         .update({ event_status: "Rejected" })
@@ -108,7 +109,6 @@ const EventCard = ({
 
       if (error) throw error;
 
-      // Send email notification to the organizer
       await sendEmail(
         organizerEmail,
         `Your event "${eventTitle}" has been rejected`,
@@ -122,11 +122,9 @@ const EventCard = ({
     }
   };
 
-  // Function to notify members based on filter
   const notifyMembersBasedOnFilter = async (eventId, eventTitle, filter) => {
     let statusesToNotify = [];
 
-    // Determine which statuses to notify based on the filter
     if (filter === "green") {
       statusesToNotify = ["Green", "Orange", "Red"]; // Notify all members
     } else if (filter === "orange") {
@@ -189,6 +187,16 @@ const EventCard = ({
     } catch (error) {
       console.error("Error updating event status:", error);
       alert("Failed to create event");
+    }
+  };
+
+  const handleUpdateStatus = async (eventId) => {
+    const result = await updateEventStatusToPublished(eventId);
+
+    if (result.success) {
+      alert('Event status updated to Published!');
+    } else {
+      alert(`Failed to update event status: ${result.message}`);
     }
   };
 
@@ -360,13 +368,13 @@ const EventCard = ({
                     : "bg-[#5C1B33] text-white"
                 } px-4 py-2 rounded-lg w-full`}
                 disabled={isRejected || participants < maxParticipants}
-                onClick={isAccepted ? handleCreateEvent : undefined}
+                onClick={isAccepted ? handleCreateEvent : isOngoing ? () => handleUpdateStatus(eventId) : isPublished ? () => navigate('/playmakershub') : undefined}
               >
                 {isRejected
                   ? "Rejected"
                   : isOngoing
                   ? "Publish Event"
-                  : "Create Event"}
+                  : isPublished ? "View on Playmakers hub" : "Create Event"}
               </button>
             </div>
           )}

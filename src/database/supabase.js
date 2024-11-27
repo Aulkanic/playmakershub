@@ -263,6 +263,98 @@ export const retrieveOngoingEvents = async () => {
     throw error;
   }
 };
+export const retrievePublishedEvents = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("events")
+      .select(
+        `
+        *,
+        bookings (
+          organizer_first_name,
+          organizer_last_name,
+          organizer_email,
+          event_location,
+          event_type_name
+        ),
+        musicians_required (
+          guitarist,
+          keyboardist,
+          vocalists,
+          bassist,
+          percussionist
+        ),
+        participation (
+          members_orgs (
+            email,
+            name,
+            profile_image
+          ),
+          musician_role,
+          status
+        )
+      `
+      )
+      .eq("event_status", "Published");
+
+    if (error) throw error;
+
+    return data.map((event) => {
+      const musicianData = event.musicians_required[0] || {};
+
+      const roles = {
+        guitarist: {
+          required: musicianData.guitarist || 0,
+          participants: [],
+        },
+        keyboardist: {
+          required: musicianData.keyboardist || 0,
+          participants: [],
+        },
+        vocalists: {
+          required: musicianData.vocalists || 0,
+          participants: [],
+        },
+        bassist: {
+          required: musicianData.bassist || 0,
+          participants: [],
+        },
+        percussionist: {
+          required: musicianData.percussionist || 0,
+          participants: [],
+        },
+      };
+
+      (event.participation || []).forEach((participant) => {
+        const role = participant.musician_role.toLowerCase();
+        if (roles[role]) {
+          roles[role].participants.push({
+            email: participant.members_orgs.email,
+            name: participant.members_orgs.name,
+            profileImage: participant.members_orgs.profile_image,
+            status: participant.status,
+          });
+        }
+      });
+
+      const totalMusicians =
+        roles.guitarist.required +
+        roles.keyboardist.required +
+        roles.vocalists.required +
+        roles.bassist.required +
+        roles.percussionist.required;
+
+      return {
+        ...event,
+        totalMusicians,
+        musicians: roles,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching ongoing events:", error);
+    throw error;
+  }
+};
 
 // new
 
@@ -557,3 +649,23 @@ export const handleParticipation =async(userId, event, musicianRole,user) =>{
     };
   }
 }
+
+export const updateEventStatusToPublished = async (eventId) => {
+  try {
+    const { data, error } = await supabase
+      .from('events') // Your table name
+      .update({ event_status: 'Published' }) // Update the event_status field
+      .eq('event_id', eventId); // Match the event_id field
+
+    if (error) {
+      console.error('Error updating event status:', error.message);
+      return { success: false, message: error.message };
+    }
+
+    console.log('Event status updated successfully:', data);
+    return { success: true, data };
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return { success: false, message: 'Unexpected error occurred.' };
+  }
+};

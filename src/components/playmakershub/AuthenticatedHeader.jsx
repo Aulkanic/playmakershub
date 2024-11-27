@@ -3,15 +3,20 @@ import { playmakersLogo } from "../../assets"; // Adjust the path as needed
 import { supabase } from "../../database/supabase";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import dayjs from "dayjs";
+import { Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Typography } from "@mui/material";
 
 const AuthenticatedHeader = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [memberDetails, setMemberDetails] = useState(null);
-  const [isPopoverVisible, setIsPopoverVisible] = useState(false); // Popover visibility
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal visibility
-  const [updatedProfile, setUpdatedProfile] = useState({}); // Form data for edit profile
-  console.log(memberDetails)
+  const [isPopoverVisible, setIsPopoverVisible] = useState(false); 
+  const [events, setEvents] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(3);
+  const [updatedProfile, setUpdatedProfile] = useState({}); 
+  const [color,setColor] = useState('Orange')
   const getCurrentUser = async () => {
     const {
       data: { user },
@@ -26,6 +31,15 @@ const AuthenticatedHeader = () => {
     }
   };
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Reset to the first page
+  };
+
   const fetchMemberDetails = async (authId) => {
     try {
       const { data, error } = await supabase
@@ -37,13 +51,49 @@ const AuthenticatedHeader = () => {
       if (error) {
         console.error("Error fetching member details:", error.message);
       } else {
+        const participationStatus = await fetchParticipationStatus(authId);
+        if(participationStatus){
+          setColor(participationStatus)
+        }
+        setMemberDetails({ ...data });
+        fetchParticipatedEvents(authId);
         setMemberDetails(data);
-        setUpdatedProfile(data); // Set initial form values
+        setUpdatedProfile(data); 
       }
     } catch (err) {
       console.error("Error fetching member details:", err.message);
     }
   };
+
+  const fetchParticipatedEvents = async (authId) => {
+    try {
+      const { data, error } = await supabase
+        .from("participation")
+        .select(
+          `
+          event_id, 
+          status, 
+          events (
+            event_id,
+            event_title,
+            start_date,
+            end_date,
+            description
+          )
+        `
+        )
+        .eq("user_id", authId);
+        console.log(data)
+      if (error) {
+        console.error("Error fetching events:", error.message);
+      } else {
+        setEvents(data);
+      }
+    } catch (err) {
+      console.error("Error fetching events:", err.message);
+    }
+  };
+
   useEffect(() => {
 
 
@@ -116,6 +166,35 @@ const AuthenticatedHeader = () => {
     }
   };
   
+  const fetchParticipationStatus = async (authId) => {
+    try {
+      const { data: participations, error } = await supabase
+        .from("participation")
+        .select("*")
+        .eq("user_id", authId);
+  
+      if (error) {
+        console.error("Error fetching participation data:", error.message);
+        return "Inactive"; 
+      }
+  
+      const participationsPerMonth = participations.filter((p) =>
+        dayjs(p.event_start_date).isSame(dayjs(), "month")
+      ).length;
+  
+      const backouts = participations.filter((p) => p.status === "Backout").length;
+      const nonParticipations = participations.filter((p) => p.status === "Non-Participation").length;
+      console.log(participationsPerMonth)
+      if (participationsPerMonth >= 2) return "Green";
+      if (nonParticipations >= 3 || backouts >= 1) return "Orange";
+      if (nonParticipations >= 5 || backouts >= 2) return "Red";
+      
+      return "Inactive"; 
+    } catch (err) {
+      console.error("Error calculating participation status:", err.message);
+      return "Inactive"; 
+    }
+  };
 
   return (
     <header className="flex items-center justify-between p-4 shadow-md py-1">
@@ -149,21 +228,33 @@ const AuthenticatedHeader = () => {
       <div className="relative">
         {/* User Profile Image */}
         <div className="flex gap-1 items-center w-40">
-        <img
-          src={memberDetails?.profile_image || "https://via.placeholder.com/40"}
-          alt="User Profile"
-          className="w-12 h-12 rounded-full object-cover cursor-pointer"
-          onClick={togglePopover}
-        />
-          <div className="flex flex-col items-start w-full">
-          <p className="font-bold text-white whitespace-nowrap truncate">{memberDetails?.name || "User"}</p>
-          <p className={`text-sm font-medium ${
-            memberDetails?.status === "active" ? "text-green-500" : "text-red-500"
-          }`}>
-            {memberDetails?.status || "Inactive"}
-          </p>
-          </div>
-        </div>
+  <img
+    src={memberDetails?.profile_image || "https://via.placeholder.com/40"}
+    alt="User Profile"
+    className="w-12 h-12 rounded-full object-cover cursor-pointer"
+    onClick={togglePopover}
+  />
+  <div className="flex flex-col items-start w-full">
+    <p className="font-bold text-white whitespace-nowrap truncate">
+      {memberDetails?.name || "User"}
+    </p>
+    <p className="flex items-center gap-2">
+      <span
+        className={`w-3 h-3 rounded-full ${
+          color === "Green"
+            ? "bg-green-500"
+            : (color === "Orange")
+            ? "bg-orange-500"
+            : "bg-red-500"
+        }`}
+      ></span>
+      <span className="text-sm font-medium text-gray-300">
+        {memberDetails?.status || "Inactive"}
+      </span>
+    </p>
+  </div>
+</div>
+
         {/* Popover Menu */}
         {isPopoverVisible && (
           <div className="absolute right-0 mt-2 bg-white shadow-lg rounded-md w-48 z-10">
@@ -245,6 +336,50 @@ const AuthenticatedHeader = () => {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"
                 />
               </div>
+              <div>
+            <h4 className="font-semibold mb-2">Events Participated</h4>
+            {events.length > 0 ? (
+   <>
+   <Table>
+     <TableHead>
+       <TableRow>
+         <TableCell>Event Name</TableCell>
+         <TableCell>Start Date</TableCell>
+         <TableCell>End Date</TableCell>
+       </TableRow>
+     </TableHead>
+     <TableBody>
+       {events
+         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+         .map((event) => {
+            console.log(event)
+          return(
+           <TableRow key={event.event_id}>
+             <TableCell>{event.events?.event_title || "N/A"}</TableCell>
+             <TableCell>
+               {new Date(event.events?.start_date).toLocaleDateString()}
+             </TableCell>
+             <TableCell>
+               {new Date(event.events?.end_date).toLocaleDateString()}
+             </TableCell>
+           </TableRow>
+         )})}
+     </TableBody>
+   </Table>
+   <TablePagination
+     component="div"
+     count={events.length}
+     page={page}
+     onPageChange={handleChangePage}
+     rowsPerPage={rowsPerPage}
+     onRowsPerPageChange={handleChangeRowsPerPage}
+     rowsPerPageOptions={[5, 10, 15]}
+   />
+ </>
+      ) : (
+        <Typography>No events participated yet.</Typography>
+      )}
+          </div>
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"

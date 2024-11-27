@@ -35,7 +35,9 @@ const OngoingEvents = () => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {ongoingEvents.length > 0 ? (
-        ongoingEvents.map((event, index) => (
+        ongoingEvents.map((event, index) => {
+           console.log(event)
+          return(
           <EventCard
             key={index}
             eventId={event.event_id}
@@ -56,10 +58,10 @@ const OngoingEvents = () => {
             status={event.event_status}
             department={event.department}
             organization={event.bookings.event_type_name}
-            participants={0}
+            participants={event.participation?.length}
             maxParticipants={event.totalMusicians}
           />
-        ))
+        )})
       ) : (
         <div>No ongoing events available.</div>
       )}

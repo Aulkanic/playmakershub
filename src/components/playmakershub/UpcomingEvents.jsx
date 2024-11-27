@@ -112,7 +112,7 @@ const UpcomingEvents = () => {
         events.map((event) => (
           <div
             key={event.event_id}
-            className="bg-white shadow-lg rounded-lg overflow-hidden"
+            className="bg-black shadow-lg rounded-lg overflow-hidden"
           >
             {/* Image Section */}
             <div className="h-40 bg-gray-200">
@@ -128,6 +128,7 @@ const UpcomingEvents = () => {
               <h3 className="text-lg font-bold text-gray-800">
                 {event.event_title}
               </h3>
+              <p>{event.description}</p>
               <p className="text-sm text-gray-600">
                 {new Date(event.start_date).toLocaleDateString()} -{" "}
                 {new Date(event.end_date).toLocaleDateString()} |{" "}
