@@ -157,7 +157,7 @@ const DoneEvents = () => {
                                 ? "bg-gray-400 cursor-not-allowed"
                                 : "bg-blue-500 hover:bg-blue-600"
                             }`}
-                            disabled={participationLoading === event.event_id || alreadyParticipated}
+                            disabled={true}
                           >
                             {participationLoading === event.event_id
                               ? "Loading..."
