@@ -140,16 +140,16 @@ const DoneEvents = () => {
                 // eslint-disable-next-line no-unused-vars
                 .filter(([_, data]) => data.required > 0) 
                 .map(([role, data], index) => {
-                  const alreadyParticipated = data.participants.some(
-                    (participant) => participant.userId === user?.id
-                  );
+                  // const alreadyParticipated = data.participants.some(
+                  //   (participant) => participant.userId === user?.id
+                  // );
                   return (
                     <div key={index} className="mb-4">
                       <div className="flex justify-between items-center bg-gray-100 p-2 rounded">
                         <span className="text-gray-700 font-medium capitalize">
                           {role} ({data.required})
                         </span>
-                        {!alreadyParticipated && (
+                        {/* {!alreadyParticipated && (
                           <button
                             onClick={() => handleParticipate(role, event)}
                             className={`text-sm text-white px-4 py-1 rounded ${
@@ -168,7 +168,7 @@ const DoneEvents = () => {
                           <span className="text-sm text-green-500 font-medium">
                             Joined
                           </span>
-                        )}
+                        )} */}
                       </div>
                       {/* Display participants */}
                       <div className="mt-2">
