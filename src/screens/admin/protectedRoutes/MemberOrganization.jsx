@@ -5,9 +5,10 @@ import MemberForm from "../../../components/admin/Reusable/MemberForm";
 import MemberDetailsModal from "../../../components/admin/MemberDetailsModal";
 import Sidebar from "../../../components/admin/Sidebar";
 import Header from "../../../components/admin/Header"; // Adjust the path as needed
-import { deleteMember, fetchMembers, supabase, updateMember } from "../../../database/supabase";
+import { deleteMember, fetchMembers, supabase, supabaseAdmin, updateMember } from "../../../database/supabase";
 import { toast } from "react-toastify";
 import sendEmail from "../../../database/sendEmail";
+
 
 const MemberOrganization = () => {
   const [members, setMembers] = useState([]);
@@ -127,6 +128,7 @@ const MemberOrganization = () => {
   
 
   const handleViewDetails = (member) => {
+    console.log(member)
     setSelectedMember(member);
     setIsDetailsModalOpen(true);
   };
@@ -134,7 +136,7 @@ const MemberOrganization = () => {
   const handleUpdateMember = async (id, updatedData) => {
     try {
       setLoading(true);
-      console.log(updatedData)
+
       await updateMember(id, updatedData);
       if (updatedData.status && updatedData.status !== "active" ) {
         console.log('here1')
@@ -146,7 +148,7 @@ const MemberOrganization = () => {
         <br/><br/>If you have any questions, please contact support.<br/><br/>
         Best regards,<br/>
         Playmakers Admin`;
-        console.log(recipientEmail)
+
         const emailResponse = await sendEmail(recipientEmail, subject, content);
         console.log(emailResponse)
         if (emailResponse.error) {
@@ -166,13 +168,21 @@ const MemberOrganization = () => {
   };
   
 
-  const handleDeleteMember = async (id) => {
+  const handleDeleteMember = async (info) => {
     try {
-      setLoading(true); // Start loading
-      const data = await deleteMember(id);
-      if (data) {
+    
+      const { authid,id } = info;
+      setLoading(true); 
+      await deleteMember(id);
         setMembers(members.filter((member) => member.id !== id));
+  
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(authid);
+
+        if (error) {  
+          console.error("Error deleting user from authentication:", error.message);
+          // Handle error if needed
       }
+  
       setIsDetailsModalOpen(false);
     } catch (error) {
       console.error("Error deleting member:", error.message);
@@ -220,7 +230,9 @@ const MemberOrganization = () => {
           </div>
         ) : (
           <div className="px-4 py-10 flex flex-wrap">
-            {filteredMembers.map((member, idx) => (
+            {filteredMembers.map((member, idx) => {
+              console.log(member)
+              return(
               <div
                 key={idx}
                 className="cursor-pointer"
@@ -228,7 +240,7 @@ const MemberOrganization = () => {
               >
                 <MemberCard {...member} />
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -256,7 +268,7 @@ const MemberOrganization = () => {
           onUpdate={(updatedData) =>
             handleUpdateMember(selectedMember.id, updatedData)
           }
-          onDelete={() => handleDeleteMember(selectedMember.id)}
+          onDelete={() => handleDeleteMember(selectedMember)}
         />
       )}
     </div>

@@ -2,7 +2,9 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+const supabaseAdminKey = import.meta.env.VITE_SUPABASE_ADMIN;
 export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseAdminKey);
 
 export const createBookingProcess = async (formData) => {
   try {
@@ -519,16 +521,19 @@ export const createMember = async (memberData) => {
 
 export const fetchMembers = async () => {
   try {
-    const { data, error } = await supabase
-      .from('members_orgs')
-      .select('*');
+    const { data: members, error } = await supabase
+    .from("members_orgs")
+    .select("*, participation:participation_user_id_fkey(*)");
 
     if (error) {
       console.error('Error fetching members:', error.message);
       return null;
     }
 
-    return data;
+    return members.map((member) => ({
+      ...member,
+      totalParticipation: member.participation.length, 
+    }));
   } catch (err) {
     console.error('Unexpected error:', err);
     return null;

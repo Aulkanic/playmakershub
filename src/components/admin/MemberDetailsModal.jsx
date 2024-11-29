@@ -43,7 +43,7 @@ const MemberDetailsModal = ({ member, onClose, onUpdate, onDelete }) => {
 
   const handleDelete = () => {
     if (window.confirm("Are you sure you want to delete this member?")) {
-      onDelete(member.id); 
+      onDelete(); 
       onClose(); 
     }
   };

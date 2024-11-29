@@ -8,6 +8,7 @@ const MemberCard = ({
   join_date,
   profile_image,
   status,
+  totalParticipation
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-md  w-80 mx-3 relative">
@@ -73,7 +74,7 @@ const MemberCard = ({
           </div>
           <div className="flex justify-between">
             <span>Total Events Participated</span>
-            <span className="font-semibold text-gray-800">{events}</span>
+            <span className="font-semibold text-gray-800">{totalParticipation}</span>
           </div>
           <div className="flex justify-between">
             <span>Email</span>
