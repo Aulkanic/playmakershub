@@ -562,9 +562,11 @@ export const fetchMemberById = async (id) => {
 
 export const updateMember = async (id, updatedData) => {
   try {
+    const { participation, totalParticipation, ...cleanedData } = updatedData;
+    
     const { data, error } = await supabase
       .from('members_orgs')
-      .update(updatedData)
+      .update(cleanedData)
       .eq('id', id);
 
     if (error) {
