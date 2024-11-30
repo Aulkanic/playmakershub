@@ -563,7 +563,7 @@ export const fetchMemberById = async (id) => {
 export const updateMember = async (id, updatedData) => {
   try {
     const { participation, totalParticipation, ...cleanedData } = updatedData;
-    
+    console.log(participation,totalPa)
     const { data, error } = await supabase
       .from('members_orgs')
       .update(cleanedData)
